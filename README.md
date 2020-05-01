@@ -18,3 +18,14 @@ password = p@ssw0rd
 
     cd interview
     pipenv run gunicorn interview.wsgi
+
+一个供参考的 systemd user unit:
+
+```ini
+# ~/.config/systemd/user/interview.service
+[Unit]
+Description=Online Interview Backend
+
+[Service]
+ExecStart=/bin/sh -c 'cd /path/to/backend/interview && pipenv run gunicorn interview.wsgi'
+```
