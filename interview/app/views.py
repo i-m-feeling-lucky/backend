@@ -11,9 +11,11 @@ import json
 
 @require_POST
 def login(req):
-    email = req.POST.get('email')
-    passw = req.POST.get('password')
-    if email is None or passw is None:
+    try:
+        data = json.loads(req.body.decode())
+        email = data['email']
+        passw = data['password']
+    except (json.JSONDecodeError, KeyError):
         return HttpResponse(status=HTTPStatus.BAD_REQUEST)
     passw = sha256(passw.encode()).hexdigest()
     try:
@@ -33,12 +35,12 @@ def login(req):
 
 @require_POST
 def logout(req):
-    email = req.POST.get('email')
-    token = req.POST.get('token')
-    if email is not None and token is not None:
-        try:
-            user = User.objects.get(email=email)
-            UserLogin.objects.get(user=user, token=token).delete()
-        except Exception:
-            pass
+    try:
+        data = json.loads(req.body.decode())
+        email = data['email']
+        token = data['token']
+        user = User.objects.get(email=email)
+        UserLogin.objects.get(user=user, token=token).delete()
+    except Exception:
+        pass
     return HttpResponse('')
