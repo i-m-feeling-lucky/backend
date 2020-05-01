@@ -4,8 +4,6 @@
 
 ## 构建
 
-    pipenv install
-
 在文件 `./interview/my.cnf` 中设置 MySQL，示例如下
 
 ```ini
@@ -13,6 +11,11 @@
 user = username
 password = p@ssw0rd
 ```
+
+运行命令
+
+    pipenv install
+    pipenv run ./interview/manage.py migrate
 
 ## 在生产环境中运行
 
