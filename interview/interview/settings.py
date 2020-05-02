@@ -31,6 +31,7 @@ ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'app',
+    'corsheaders',
     # 'django.contrib.admin',
     # 'django.contrib.auth',
     # 'rest_framework',
@@ -44,7 +45,11 @@ MIDDLEWARE = [
     # 'django.contrib.auth.middleware.AuthenticationMiddleware',
     # 'django.contrib.messages.middleware.MessageMiddleware',
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
+
+CORS_ORIGIN_WHITELIST = ['https://interview.yusanshi.com']
+CORS_ORIGIN_REGEX_WHITELIST = [r'http://(localhost|127\.0\.0\.1):\d+']
 
 ROOT_URLCONF = 'interview.urls'
 
