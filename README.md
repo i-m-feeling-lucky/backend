@@ -30,5 +30,6 @@ password = p@ssw0rd
 Description=Online Interview Backend
 
 [Service]
-ExecStart=/bin/sh -c 'cd /path/to/backend/interview && pipenv run gunicorn interview.wsgi'
+WorkingDirectory=/path/to/backend/interview
+ExecStart=/path/to/pipenv run gunicorn interview.wsgi
 ```
