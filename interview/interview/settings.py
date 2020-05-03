@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
+from corsheaders.defaults import default_headers
+
 import random
 import os
 
@@ -50,6 +52,7 @@ MIDDLEWARE = [
 
 CORS_ORIGIN_WHITELIST = ['https://interview.yusanshi.com']
 CORS_ORIGIN_REGEX_WHITELIST = [r'http://(localhost|127\.0\.0\.1):\d+']
+CORS_ALLOW_HEADERS = list(default_headers) + ['X-Token']
 
 ROOT_URLCONF = 'interview.urls'
 

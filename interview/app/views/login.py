@@ -36,11 +36,8 @@ def login(req):
 @require_POST
 def logout(req):
     try:
-        data = json.loads(req.body.decode())
-        email = data['email']
-        token = data['token']
-        user = User.objects.get(email=email)
-        UserLogin.objects.get(user=user, token=token).delete()
+        token = req.META['HTTP_X_TOKEN']
+        UserLogin.objects.filter(token=token).delete()
     except Exception:
         pass
     return HttpResponse('')
