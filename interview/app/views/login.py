@@ -21,7 +21,7 @@ def login(req):
     try:
         user = User.objects.get(email=email, pass_sha256=passw)
     except ObjectDoesNotExist:
-        return HttpResponse('{}')
+        return HttpResponse('{"message": "账号或密码错误"}', status=HTTPStatus.UNAUTHORIZED)
     tok = uuid4()
     user_login = UserLogin(user=user, token=tok)
     user_login.save()
