@@ -1,4 +1,4 @@
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET, require_http_methods
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from app.models import User, UserLogin
@@ -38,3 +38,53 @@ def logout(req):
     except Exception:
         pass
     return HttpResponse('')
+
+
+@require_http_methods(['GET', 'POST'])
+def user(req):
+    if req.method == 'GET':
+        return user_infos(req)
+    elif req.method == 'POST':
+        return add_user(req)
+    else:
+        return HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED)
+
+
+def user_infos(req):
+    # TODO: GET /user
+    return HttpResponse(status=HTTPStatus.NOT_IMPLEMENTED)
+
+
+def add_user(req):
+    # TODO: POST /user
+    return HttpResponse(status=HTTPStatus.NOT_IMPLEMENTED)
+
+
+@require_GET
+def user_info(req, id):
+    # TODO: GET /user/{id}
+    return HttpResponse(status=HTTPStatus.NOT_IMPLEMENTED)
+
+
+@require_http_methods(['PUT'])
+def put_password(req, id):
+    # TODO: PUT /user/{id}/pasword
+    return HttpResponse(status=HTTPStatus.NOT_IMPLEMENTED)
+
+
+@require_http_methods(['PUT'])
+def put_free_time(req, id):
+    # TODO: PUT /user/{id}/free_time
+    return HttpResponse(status=HTTPStatus.NOT_IMPLEMENTED)
+
+
+@require_http_methods(['PUT'])
+def put_application_result(req, id):
+    # TODO: PUT /user/{id}/application_result
+    return HttpResponse(status=HTTPStatus.NOT_IMPLEMENTED)
+
+
+@require_POST
+def add_assignment(req, id):
+    # TODO: POST /user/assignment
+    return HttpResponse(status=HTTPStatus.NOT_IMPLEMENTED)
