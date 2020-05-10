@@ -79,12 +79,18 @@ def put_free_time(req, id):
 
 
 @require_http_methods(['PUT'])
-def put_application_result(req, id):
-    # TODO: PUT /user/{id}/application_result
+def put_application_result(req):
+    # TODO: PUT /user/application_result
     return HttpResponse(status=HTTPStatus.NOT_IMPLEMENTED)
 
 
 @require_POST
-def add_assignment(req, id):
-    # TODO: POST /user/assignment
+def assign_interviewer(req):
+    # TODO: POST /user/assign/interviewer
+    return HttpResponse(status=HTTPStatus.NOT_IMPLEMENTED)
+
+
+@require_POST
+def assign_interviewee(req):
+    # TODO: POST /user/assign/interviewee
     return HttpResponse(status=HTTPStatus.NOT_IMPLEMENTED)
