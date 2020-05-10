@@ -1,6 +1,6 @@
 from django.views.decorators.http import require_POST, require_GET, require_http_methods
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from app.models import User, UserLogin
 
 from hashlib import sha256
@@ -20,14 +20,14 @@ def login(req):
     try:
         user = User.objects.get(email=email, pass_sha256=passw)
     except ObjectDoesNotExist:
-        return HttpResponse('{"message": "账号或密码错误"}', status=HTTPStatus.UNAUTHORIZED)
+        return JsonResponse({"message": "账号或密码错误"}, status=HTTPStatus.UNAUTHORIZED)
     user_login = UserLogin(user=user)
     user_login.save()
     res = {
         'role': user.role,
         'token': str(user_login.token),
     }
-    return HttpResponse(json.dumps(res))
+    return JsonResponse(res)
 
 
 @require_POST
