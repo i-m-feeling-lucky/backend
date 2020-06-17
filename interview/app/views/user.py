@@ -24,6 +24,7 @@ def login(req):
     user_login = UserLogin(user=user)
     user_login.save()
     res = {
+        'id': user.id,
         'role': user.role,
         'token': str(user_login.token),
     }
