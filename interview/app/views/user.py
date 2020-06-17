@@ -63,7 +63,7 @@ def add_user(req):
 
 @require_GET
 def user_info(req, id):
-    # TODO: GET /user/{id}
+    # GET /user/{id}: deprecated
     return HttpResponse(status=HTTPStatus.NOT_IMPLEMENTED)
 
 
