@@ -65,6 +65,12 @@ class HRAssignInterviewee(models.Model):
 
 
 class Interview(models.Model):
+    STATUSES = [
+        ('upcoming', 'upcoming'),
+        ('active', 'active'),
+        ('ended', 'ended'),
+    ]
+
     hr = models.ForeignKey(User, models.PROTECT)
     interviewer = models.ForeignKey(Interviewer, models.PROTECT)
     interviewee = models.ForeignKey(Interviewee, models.PROTECT)
@@ -73,6 +79,7 @@ class Interview(models.Model):
     password = models.CharField(max_length=32)
     start_time = models.DateTimeField()
     length = models.PositiveIntegerField(default=30)
+    status = models.CharField(max_length=10, choices=STATUSES, default='upcoming')
 
     def __str__(self):
         return f'Interview: interviewer {self.interviewer.id}, interviewee {self.interviewee.id}'
