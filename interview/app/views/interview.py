@@ -116,9 +116,19 @@ def interview_info(req, id):
 def interview_verify(req, id):
     # GET /interview/{id}/verify
     try:
-        token = req.META.get("HTTP_X_TOKEN")
+        token = req.GET.get('token')
+        hr_token = req.META.get("HTTP_X_TOKEN")
         
-        if Interview.objects.filter(interviewer_token=token, id=id).exists():
+        if UserLogin.objects.filter(token=hr_token).exists():
+            if UserLogin.objects.filter(token=hr_token).first().user == Interview.objects.filter(id=id).first().hr:
+                data = Interview.objects.filter(id=id).values('password').first()
+                data['role'] = 1
+                return JsonResponse(data)
+            else:
+                res = {"message": "Current user is not the HR of this interview"}
+                return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+        
+        elif Interview.objects.filter(interviewer_token=token, id=id).exists():
             data = Interview.objects.filter(interviewer_token=token, id=id).values('password').first()
             data['role'] = 2
             return JsonResponse(data)
@@ -127,7 +137,7 @@ def interview_verify(req, id):
             data = Interview.objects.filter(interviewee_token=token, id=id).values('password').first()
             data['role'] = 3
             return JsonResponse(data)
-        
+
         else:
             res = {"message": "token 信息无效"}
             return JsonResponse(res, status=HTTPStatus.UNAUTHORIZED)
