@@ -16,5 +16,6 @@ urlpatterns = [
     path('interview/<int:id>', interview.interview_info),
     path('interview/<int:id>/verify', interview.interview_verify),
     path('interview/<int:id>/evaluation', interview.add_evaluation),
+    path('interview/<int:id>/status', interview.set_status),
     path('interview/<int:id>/history/<ty>', interview.history),
 ]

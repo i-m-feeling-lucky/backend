@@ -26,15 +26,15 @@ def interview_infos(req):
     # GET /interview
     try:
         token = req.META.get("HTTP_X_TOKEN")
-        
+
         if UserLogin.objects.filter(token=token).exists():
             data = Interview.objects.values("id", "hr", "interviewer", "interviewee", "start_time", "length")
             return JsonResponse(list(data), safe=False)
-        
+
         else:
             res = {"message": "token 信息无效"}
             return JsonResponse(res, status=HTTPStatus.UNAUTHORIZED)
-    
+
     except Exception as e:
         res = {"message": str(e)}
         return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
@@ -44,25 +44,25 @@ def add_interview(req):
     # POST /interview
     try:
         token = req.META.get("HTTP_X_TOKEN")
-        
+
         if UserLogin.objects.filter(token=token).exists():
-            
+
             data = json.loads(req.body.decode())
             hr = data['hr']
             interviewer = data['interviewer']
             interviewee = data['interviewee']
             start_time = data['start_time']
             length = data['length']
-            interviewer_token = str(uuid.uuid4()).replace('-','')
-            interviewee_token = str(uuid.uuid4()).replace('-','')
-            password = ''.join(random.sample(string.ascii_letters+string.digits,8))
-            
+            interviewer_token = str(uuid.uuid4()).replace('-', '')
+            interviewee_token = str(uuid.uuid4()).replace('-', '')
+            password = ''.join(random.sample(string.ascii_letters+string.digits, 8))
+
             # current_user.id == hr
             current_user = UserLogin.objects.filter(token=token).first().user
             if current_user.id != hr:
                 res = {"message": "Current user is not the HR"}
                 return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
-            
+
             # (current_user, interviewer) in HRAssignInterviewer
             if not HRAssignInterviewer.objects.filter(hr=hr, interviewer=interviewer).exists():
                 res = {"message": "Current HR does not assign the interviewer"}
@@ -77,17 +77,19 @@ def add_interview(req):
             else:
                 obj_interviewee = HRAssignInterviewee.objects.filter(hr=hr, interviewee=interviewee).first().interviewee
 
-            interview = Interview(hr=current_user, interviewer=obj_interviewer, interviewee=obj_interviewee, interviewer_token=interviewer_token, interviewee_token=interviewee_token, password=password, start_time=start_time, length=length)
+            interview = Interview(hr=current_user, interviewer=obj_interviewer, interviewee=obj_interviewee,
+                                  interviewer_token=interviewer_token, interviewee_token=interviewee_token,
+                                  password=password, start_time=start_time, length=length)
             interview.save()
 
             # TODO: Send emails
-            
+
             return HttpResponse(status=HTTPStatus.OK)
-        
+
         else:
             res = {"message": "token 信息无效"}
             return JsonResponse(res, status=HTTPStatus.UNAUTHORIZED)
-    
+
     except Exception as e:
         res = {"message": str(e)}
         return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
@@ -98,15 +100,16 @@ def interview_info(req, id):
     # GET /interview/{id}
     try:
         token = req.META.get("HTTP_X_TOKEN")
-        
+
         if UserLogin.objects.filter(token=token).exists():
-            data = Interview.objects.filter(id=id).values("id", "hr", "interviewer", "interviewee", "start_time", "length").first()
+            data = Interview.objects.filter(id=id).values("id", "hr", "interviewer",
+                                                          "interviewee", "start_time", "length").first()
             return JsonResponse(data)
-        
+
         else:
             res = {"message": "token 信息无效"}
             return JsonResponse(res, status=HTTPStatus.UNAUTHORIZED)
-   
+
     except Exception as e:
         res = {"message": str(e)}
         return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
@@ -118,7 +121,7 @@ def interview_verify(req, id):
     try:
         token = req.GET.get('token')
         hr_token = req.META.get("HTTP_X_TOKEN")
-        
+
         if UserLogin.objects.filter(token=hr_token).exists():
             if UserLogin.objects.filter(token=hr_token).first().user == Interview.objects.filter(id=id).first().hr:
                 data = Interview.objects.filter(id=id).values('password').first()
@@ -127,12 +130,12 @@ def interview_verify(req, id):
             else:
                 res = {"message": "Current user is not the HR of this interview"}
                 return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
-        
+
         elif Interview.objects.filter(interviewer_token=token, id=id).exists():
             data = Interview.objects.filter(interviewer_token=token, id=id).values('password').first()
             data['role'] = 2
             return JsonResponse(data)
-        
+
         elif Interview.objects.filter(interviewee_token=token, id=id).exists():
             data = Interview.objects.filter(interviewee_token=token, id=id).values('password').first()
             data['role'] = 3
@@ -141,7 +144,7 @@ def interview_verify(req, id):
         else:
             res = {"message": "token 信息无效"}
             return JsonResponse(res, status=HTTPStatus.UNAUTHORIZED)
-    
+
     except Exception as e:
         res = {"message": str(e)}
         return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
@@ -152,12 +155,12 @@ def add_evaluation(req, id):
     # PUT /interview/{id}/evaluation
     try:
         token = req.META.get("HTTP_X_TOKEN")
-        
+
         if UserLogin.objects.filter(token=token).exists():
             current_user = UserLogin.objects.filter(token=token).first().user
             interviewer = Interview.objects.filter(id=id).first().interviewer.id
             interview = Interview.objects.filter(id=id).first()
-            
+
             if interviewer.id != current_user.id:
                 res = {"message": "unauthorized user"}
                 return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
@@ -169,7 +172,34 @@ def add_evaluation(req, id):
         else:
             res = {"message": "token 信息无效"}
             return JsonResponse(res, status=HTTPStatus.UNAUTHORIZED)
-    
+
+    except Exception as e:
+        res = {"message": str(e)}
+        return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+
+
+def set_status(req, id):
+    # PUT /interview/{id}/status
+    try:
+        token = req.META.get("HTTP_X_TOKEN")
+
+        if UserLogin.objects.filter(token=token).exists():
+            current_user = UserLogin.objects.filter(token=token).first().user
+            interviewer = Interview.objects.filter(id=id).first().interviewer.id
+
+            if interviewer.id != current_user.id:
+                res = {"message": "unauthorized user"}
+                return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+            else:
+                data = json.loads(req.body.decode())
+                interview = Interview.objects.get(id=id)
+                interview.status = data['status']
+                interview.save()
+                return HttpResponse(status=HTTPStatus.OK)
+        else:
+            res = {"message": "token 信息无效"}
+            return JsonResponse(res, status=HTTPStatus.UNAUTHORIZED)
+
     except Exception as e:
         res = {"message": str(e)}
         return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
@@ -189,26 +219,27 @@ def get_history(req, id, ty):
     # GET /interview/{id}/history/{ty}
     try:
         token = req.META.get("HTTP_X_TOKEN")
-        
+
         if UserLogin.objects.filter(token=token).exists():
             scope = req.GET.get('scope')
-            
+
             if scope == "all":
                 data = History.objects.filter(type=ty, interview__id=id).values('time', 'data')
                 return JsonResponse(list(data), safe=False)
             elif scope == "latest":
-                data = History.objects.filter(type=ty, interview__id=id).order_by('-time').first().values('time', 'data')
+                data = History.objects.filter(type=ty, interview__id=id).order_by(
+                    '-time').first().values('time', 'data')
                 return JsonResponse(list(data), safe=False)
             else:
                 data = []
                 return JsonResponse(data, safe=False)
-            
+
             return JsonResponse(data)
-        
+
         else:
             res = {"message": "token 信息无效"}
             return JsonResponse(res, status=HTTPStatus.UNAUTHORIZED)
-   
+
     except Exception as e:
         res = {"message": str(e)}
         return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
@@ -218,17 +249,18 @@ def add_history(req, id, ty):
     # POST /interview/{id}/history/{ty}
     try:
         token = req.META.get("HTTP_X_TOKEN")
-        
+
         if UserLogin.objects.filter(token=token).exists():
             interview = Interview.objects.filter(id=id).first()
-            history = History(interview=interview, type=ty, time=str(datetime.datetime.utcnow()), data=json.dumps(req.body.decode()))
+            history = History(interview=interview, type=ty, time=str(
+                datetime.datetime.utcnow()), data=json.dumps(req.body.decode()))
             history.save()
             return HttpResponse(status=HTTPStatus.OK)
-        
+
         else:
             res = {"message": "token 信息无效"}
             return JsonResponse(res, status=HTTPStatus.UNAUTHORIZED)
-   
+
     except Exception as e:
         res = {"message": str(e)}
         return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
