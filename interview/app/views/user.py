@@ -53,38 +53,37 @@ def user(req):
 
 @require_GET
 def user_infos(req):
+    # GET /user
     try:
-        res = []
-        ids = list(Interviewer.objects.all().values_list('id'))
-        for i in ids:
-            single_info = User.objects.get(id=i[0])
-            res.append({"id":i[0],"email":single_info.__dict__["email"],"role":single_info.__dict__["role"]})
+        res = [{"id": user.id, "email": user.email, "role": user.role}
+               for user in User.objects.all()]
         return JsonResponse(res, status=HTTPStatus.OK, safe=False)
     except Exception:
         return JsonResponse({"message": '批量获取用户信息失败'}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
 
 
 def add_user(req):
+    # GET /user
     try:
         data = json.loads(req.body.decode())
-        email = data['email']
-        passw = data['password']
-        role = data['role']
-        passw = sha256(passw.encode()).hexdigest()
-        u = User.objects.create(email=email, pass_sha256=passw, role=role)
-        u.full_clean()
-        if role == 2:
-            user = User.objects.get(email=email)
-            Interviewer.objects.create(id=user, free_time='')
-            viewer = Interviewer.objects.get(id=user)
-        elif role == 3:
-            name = data['name']
-            if not name or len(name) > 64:
-                raise
-            Interviewee.objects.create(email=email, name=name)
-        return JsonResponse({}, status=HTTPStatus.OK)
+        for one_user in data:
+            email = one_user['email']
+            role = one_user['role']
+            if role == 3:
+                name = one_user['name']
+                ie = Interviewee(email=email, name=name)
+                ie.full_clean()
+                ie.save()
+            else:
+                passw = sha256(one_user['password'].encode()).hexdigest()
+                user = User(email=email, pass_sha256=passw, role=role)
+                user.full_clean()
+                user.save()
+                if role == 2:
+                    Interviewer.objects.create(id=user, free_time='')
     except Exception:
         return JsonResponse({"message": "添加失败"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+    return JsonResponse({}, status=HTTPStatus.OK)
 
 
 @require_GET
