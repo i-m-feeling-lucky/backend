@@ -233,8 +233,8 @@ def assign_interviewer(req):
     try:
         hr = User.objects.get(id=hrid)
         intervieweru = User.objects.get(id=interviewerid)
-        interviewer = interviewer.objects.get(id=intervieweru)
-        HRAssignInterviewer.create(hr=hr, interviewer=interviewer)
+        interviewer = Interviewer.objects.get(id=intervieweru)
+        HRAssignInterviewer.objects.create(hr=hr, interviewer=interviewer)
         return JsonResponse({}, status=HTTPStatus.OK)
     except Exception:
         return JsonResponse({"message": "添加失败"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
@@ -253,7 +253,7 @@ def assign_interviewee(req):
     try:
         hr = User.objects.get(id=hrid)
         interviewee = Interviewee.objects.get(email=intervieweemail)
-        HRAssignInterviewee.create(hr=hr, interviewer=interviewee)
+        HRAssignInterviewee.objects.create(hr=hr, interviewer=interviewee)
         return JsonResponse({}, status=HTTPStatus.OK)
     except Exception:
         return JsonResponse({"message": "添加失败"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
