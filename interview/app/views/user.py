@@ -41,6 +41,25 @@ def logout(req):
     return JsonResponse({}, status=HTTPStatus.OK)
 
 
+@require_GET
+def interviewee_infos(req):
+    # GET /interviewee
+    try:
+        token = req.META["HTTP_X_TOKEN"]
+        userlogin = UserLogin.objects.get(token=token)
+        curr_user = userlogin.user
+        if curr_user.role != 0:
+            return JsonResponse({"message": "权限不足"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+        res = [{
+            "email": inte.email,
+            "name": inte.name,
+            "application_result": inte.application_result
+        } for inte in Interviewee.objects.all()]
+        return JsonResponse(res, status=HTTPStatus.OK, safe=False)
+    except Exception:
+        return JsonResponse({"message": "获取失败"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+
+
 @require_http_methods(['GET', 'POST'])
 def user(req):
     if req.method == 'GET':
@@ -63,7 +82,7 @@ def user_infos(req):
 
 
 def add_user(req):
-    # GET /user
+    # POST /user
     try:
         data = json.loads(req.body.decode())
         for one_user in data:
@@ -123,7 +142,29 @@ def put_password(req, id):
     return JsonResponse({}, status=HTTPStatus.OK)
 
 
-@require_http_methods(['PUT'])
+@require_http_methods(['GET', 'PUT'])
+def free_time(req, id):
+    if req.method == 'GET':
+        return get_free_time(req, id)
+    elif req.method == 'PUT':
+        return put_free_time(req, id)
+    else:
+        return HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED)
+
+
+def get_free_time(req, id):
+    # GET /user/{id}/free_time
+    try:
+        token = req.META["HTTP_X_TOKEN"]
+        userlogin = UserLogin.objects.get(token=token)
+        curr_user = userlogin.user
+        if curr_user.id != id or curr_user.role != 2:
+            return JsonResponse({"message": "权限不足"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+        return JsonResponse({"free_time": curr_user.interviewer.free_time}, status=HTTPStatus.OK)
+    except Exception:
+        return JsonResponse({"message": "查看失败"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+
+
 def put_free_time(req, id):
     # PUT /user/{id}/free_time
     data = json.loads(req.body.decode())
@@ -157,6 +198,26 @@ def put_application_result(req):
         return JsonResponse({}, status=HTTPStatus.OK)
     except Exception:
         return JsonResponse({"message": "设置失败"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+
+
+@require_GET
+def get_assignment(req, id):
+    # GET /user/{id}/assignment
+    token = req.META.get("HTTP_X_TOKEN")
+    userlogin = UserLogin.objects.get(token=token)
+    curr_user = userlogin.user
+
+    if curr_user.role != 1:
+        return JsonResponse({"message": "权限不足"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+
+    intrs = [x.id for x in HRAssignInterviewer.objects.get(hr=curr_user)]
+    intes = [{
+        "email": inte.email,
+        "name": inte.name,
+        "application_result": inte.application_result
+    } for inte in HRAssignInterviewee.objects.get(hr=curr_user)]
+    res = {"interviewers": intrs, "interviewees": intes}
+    return JsonResponse(res, status=HTTPStatus.OK)
 
 
 @require_POST
