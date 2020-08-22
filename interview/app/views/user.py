@@ -211,12 +211,15 @@ def get_assignment(req, id):
         if curr_user.role != 1:
             return JsonResponse({"message": "权限不足"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
 
-        intrs = [x.id for x in HRAssignInterviewer.objects.filter(hr=curr_user)]
+        intrs = [{
+            "uid": x.interviewer.id.id,
+            "email": x.interviewer.id.email
+        } for x in HRAssignInterviewer.objects.filter(hr=curr_user)]
         intes = [{
-            "email": inte.email,
-            "name": inte.name,
-            "application_result": inte.application_result
-        } for inte in HRAssignInterviewee.objects.filter(hr=curr_user)]
+            "email": x.interviewee.email,
+            "name": x.interviewee.name,
+            "application_result": x.interviewee.application_result
+        } for x in HRAssignInterviewee.objects.filter(hr=curr_user)]
         res = {"interviewers": intrs, "interviewees": intes}
         return JsonResponse(res, status=HTTPStatus.OK)
     except Exception:
@@ -245,7 +248,7 @@ def assign_interviewer(req):
 
 @require_POST
 def assign_interviewee(req):
-    # POST /user/assign/interviewer
+    # POST /user/assign/interviewee
     data = json.loads(req.body.decode())
     token = req.META.get("HTTP_X_TOKEN")
     userlogin = UserLogin.objects.get(token=token)
