@@ -204,20 +204,23 @@ def put_application_result(req):
 def get_assignment(req, id):
     # GET /user/{id}/assignment
     token = req.META.get("HTTP_X_TOKEN")
-    userlogin = UserLogin.objects.get(token=token)
-    curr_user = userlogin.user
+    try:
+        userlogin = UserLogin.objects.get(token=token)
+        curr_user = userlogin.user
 
-    if curr_user.role != 1:
-        return JsonResponse({"message": "权限不足"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+        if curr_user.role != 1:
+            return JsonResponse({"message": "权限不足"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
 
-    intrs = [x.id for x in HRAssignInterviewer.objects.get(hr=curr_user)]
-    intes = [{
-        "email": inte.email,
-        "name": inte.name,
-        "application_result": inte.application_result
-    } for inte in HRAssignInterviewee.objects.get(hr=curr_user)]
-    res = {"interviewers": intrs, "interviewees": intes}
-    return JsonResponse(res, status=HTTPStatus.OK)
+        intrs = [x.id for x in HRAssignInterviewer.objects.filter(hr=curr_user)]
+        intes = [{
+            "email": inte.email,
+            "name": inte.name,
+            "application_result": inte.application_result
+        } for inte in HRAssignInterviewee.objects.filter(hr=curr_user)]
+        res = {"interviewers": intrs, "interviewees": intes}
+        return JsonResponse(res, status=HTTPStatus.OK)
+    except Exception:
+        return JsonResponse({"message": "获取失败"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
 
 
 @require_POST
