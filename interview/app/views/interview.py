@@ -10,6 +10,7 @@ import uuid
 import random
 import string
 import datetime
+from datetime import timezone
 
 
 @require_http_methods(['GET', 'POST'])
@@ -28,7 +29,24 @@ def interview_infos(req):
         token = req.META.get("HTTP_X_TOKEN")
 
         if UserLogin.objects.filter(token=token).exists():
-            data = Interview.objects.values("id", "hr", "interviewer", "interviewee", "start_time", "length")
+            role = UserLogin.objects.get(token=token).user.role
+            data = Interview.objects.values("id", "hr", "interviewer", "interviewee",
+                                            "interviewer_token", "start_time", "length", "status")
+
+            for item in data:
+                interview = Interview.objects.get(id=item["id"])
+
+                item["start_time"] = int(item["start_time"].replace(tzinfo=timezone.utc).timestamp())
+                if role != 2:
+                    item["interviewer_token"] = ""
+
+                try:
+                    comment = InterviewComment.objects.get(interview=interview)
+                    item['rate'] = comment.rate
+                    item["comment"] = comment.comment
+                except:
+                    item['rate'] = -1
+                    item["comment"] = ""
             return JsonResponse(list(data), safe=False)
 
         else:
@@ -51,7 +69,7 @@ def add_interview(req):
             hr = data['hr']
             interviewer = data['interviewer']
             interviewee = data['interviewee']
-            start_time = data['start_time']
+            start_time = datetime.datetime.utcfromtimestamp(data['start_time'])
             length = data['length']
             interviewer_token = str(uuid.uuid4()).replace('-', '')
             interviewee_token = str(uuid.uuid4()).replace('-', '')
@@ -100,12 +118,18 @@ def interview_info(req, id):
     # GET /interview/{id}
     try:
         token = req.META.get("HTTP_X_TOKEN")
+        hr = Interview.objects.get(id=id).hr
 
-        if UserLogin.objects.filter(token=token).exists():
+        if ((UserLogin.objects.filter(token=token).exists() and
+                UserLogin.objects.get(token=token).user.role == 0) or
+                UserLogin.objects.filter(user=hr, token=token).exists() or
+                Interview.objects.filter(id=id, interviewer_token=token).exists() or
+                Interview.objects.filter(id=id, interviewee_token=token).exists()):
             data = Interview.objects.filter(id=id).values("id", "hr", "interviewer",
-                                                          "interviewee", "start_time", "length").first()
+                                                          "interviewee", "start_time", "length", 
+                                                          "status").first()
+            data['start_time'] = int(data['start_time'].replace(tzinfo=timezone.utc).timestamp())
             return JsonResponse(data)
-
         else:
             res = {"message": "token 信息无效"}
             return JsonResponse(res, status=HTTPStatus.UNAUTHORIZED)
@@ -119,25 +143,27 @@ def interview_info(req, id):
 def interview_verify(req, id):
     # GET /interview/{id}/verify
     try:
-        token = req.GET.get('token')
-        hr_token = req.META.get("HTTP_X_TOKEN")
+        token = req.META.get("HTTP_X_TOKEN")
+        hr = Interview.objects.get(id=id).hr
 
-        if UserLogin.objects.filter(token=hr_token).exists():
-            if UserLogin.objects.filter(token=hr_token).first().user == Interview.objects.filter(id=id).first().hr:
-                data = Interview.objects.filter(id=id).values('password').first()
-                data['role'] = 1
-                return JsonResponse(data)
-            else:
-                res = {"message": "Current user is not the HR of this interview"}
-                return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+        if (UserLogin.objects.filter(token=token).exists() and
+                UserLogin.objects.get(token=token).user.role == 0):
+            data = Interview.objects.filter(id=id).values('password').first()
+            data['role'] = 0
+            return JsonResponse(data)
+
+        elif UserLogin.objects.filter(user=hr, token=token).exists():
+            data = Interview.objects.filter(id=id).values('password').first()
+            data['role'] = 1
+            return JsonResponse(data)
 
         elif Interview.objects.filter(interviewer_token=token, id=id).exists():
-            data = Interview.objects.filter(interviewer_token=token, id=id).values('password').first()
+            data = Interview.objects.filter(id=id).values('password').first()
             data['role'] = 2
             return JsonResponse(data)
 
         elif Interview.objects.filter(interviewee_token=token, id=id).exists():
-            data = Interview.objects.filter(interviewee_token=token, id=id).values('password').first()
+            data = Interview.objects.filter(id=id).values('password').first()
             data['role'] = 3
             return JsonResponse(data)
 
@@ -156,19 +182,12 @@ def add_evaluation(req, id):
     try:
         token = req.META.get("HTTP_X_TOKEN")
 
-        if UserLogin.objects.filter(token=token).exists():
-            current_user = UserLogin.objects.filter(token=token).first().user
-            interviewer = Interview.objects.filter(id=id).first().interviewer.id
-            interview = Interview.objects.filter(id=id).first()
-
-            if interviewer.id != current_user.id:
-                res = {"message": "unauthorized user"}
-                return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
-            else:
-                data = json.loads(req.body.decode())
-                interviewer_comment = InterviewComment(interview=interview, rate=data['rate'], comment=data['comment'])
-                interviewer_comment.save()
-                return HttpResponse(status=HTTPStatus.OK)
+        if Interview.objects.filter(interviewer_token=token, id=id).exists():
+            interview = Interview.objects.get(id=id)
+            data = json.loads(req.body.decode())
+            interviewer_comment = InterviewComment(interview=interview, rate=data['rate'], comment=data['comment'])
+            interviewer_comment.save()
+            return HttpResponse(status=HTTPStatus.OK)
         else:
             res = {"message": "token 信息无效"}
             return JsonResponse(res, status=HTTPStatus.UNAUTHORIZED)
@@ -183,19 +202,12 @@ def set_status(req, id):
     try:
         token = req.META.get("HTTP_X_TOKEN")
 
-        if UserLogin.objects.filter(token=token).exists():
-            current_user = UserLogin.objects.filter(token=token).first().user
-            interviewer = Interview.objects.filter(id=id).first().interviewer.id
-
-            if interviewer.id != current_user.id:
-                res = {"message": "unauthorized user"}
-                return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
-            else:
-                data = json.loads(req.body.decode())
-                interview = Interview.objects.get(id=id)
-                interview.status = data['status']
-                interview.save()
-                return HttpResponse(status=HTTPStatus.OK)
+        if Interview.objects.filter(interviewer_token=token, id=id).exists():
+            data = json.loads(req.body.decode())
+            interview = Interview.objects.get(id=id)
+            interview.status = data['status']
+            interview.save()
+            return HttpResponse(status=HTTPStatus.OK)
         else:
             res = {"message": "token 信息无效"}
             return JsonResponse(res, status=HTTPStatus.UNAUTHORIZED)
@@ -219,17 +231,26 @@ def get_history(req, id, ty):
     # GET /interview/{id}/history/{ty}
     try:
         token = req.META.get("HTTP_X_TOKEN")
+        hr = Interview.objects.get(id=id).hr
 
-        if UserLogin.objects.filter(token=token).exists():
+        if ((UserLogin.objects.filter(token=token).exists() and
+                UserLogin.objects.get(token=token).user.role == 0) or
+                UserLogin.objects.filter(user=hr, token=token).exists() or
+                Interview.objects.filter(id=id, interviewer_token=token).exists()):
             scope = req.GET.get('scope')
-
             if scope == "all":
                 data = History.objects.filter(type=ty, interview__id=id).values('time', 'data')
+                for item in data:
+                    item['time'] = int(item['time'].replace(tzinfo=timezone.utc).timestamp() * 1000)
+                    item['data'] = json.loads(item['data'])
                 return JsonResponse(list(data), safe=False)
             elif scope == "latest":
                 data = History.objects.filter(type=ty, interview__id=id).order_by(
-                    '-time').first().values('time', 'data')
-                return JsonResponse(list(data), safe=False)
+                    '-time').first()
+                res = {}
+                res['time'] = int(data.time.replace(tzinfo=timezone.utc).timestamp() * 1000)
+                res['data'] = json.loads(data.data)
+                return JsonResponse(res)
             else:
                 data = []
                 return JsonResponse(data, safe=False)
@@ -250,7 +271,8 @@ def add_history(req, id, ty):
     try:
         token = req.META.get("HTTP_X_TOKEN")
 
-        if UserLogin.objects.filter(token=token).exists():
+        if (Interview.objects.filter(id=id, interviewer_token=token).exists() or
+                Interview.objects.filter(id=id, interviewee_token=token).exists()):
             interview = Interview.objects.filter(id=id).first()
             history = History(interview=interview, type=ty, time=str(
                 datetime.datetime.utcnow()), data=json.dumps(req.body.decode()))
