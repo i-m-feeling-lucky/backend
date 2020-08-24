@@ -126,7 +126,7 @@ def interview_info(req, id):
                 Interview.objects.filter(id=id, interviewer_token=token).exists() or
                 Interview.objects.filter(id=id, interviewee_token=token).exists()):
             data = Interview.objects.filter(id=id).values("id", "hr", "interviewer",
-                                                          "interviewee", "start_time", "length", 
+                                                          "interviewee", "start_time", "length",
                                                           "status").first()
             data['start_time'] = int(data['start_time'].replace(tzinfo=timezone.utc).timestamp())
             return JsonResponse(data)
@@ -233,12 +233,14 @@ def get_history(req, id, ty):
         token = req.META.get("HTTP_X_TOKEN")
         hr = Interview.objects.get(id=id).hr
 
-        if ((UserLogin.objects.filter(token=token).exists() and
-                UserLogin.objects.get(token=token).user.role == 0) or
-                UserLogin.objects.filter(user=hr, token=token).exists() or
-                Interview.objects.filter(id=id, interviewer_token=token).exists()):
+        if (UserLogin.objects.filter(user=hr, token=token).exists() or
+                Interview.objects.filter(id=id, interviewer_token=token).exists() or
+                Interview.objects.filter(id=id, interviewee_token=token).exists()):
             scope = req.GET.get('scope')
-            if scope == "all":
+            if not History.objects.filter(type=ty, interview__id=id).exists():
+                data = []
+                return JsonResponse(data, safe=False)
+            elif scope == "all":
                 data = History.objects.filter(type=ty, interview__id=id).values('time', 'data')
                 for item in data:
                     item['time'] = int(item['time'].replace(tzinfo=timezone.utc).timestamp() * 1000)
@@ -250,7 +252,7 @@ def get_history(req, id, ty):
                 res = {}
                 res['time'] = int(data.time.replace(tzinfo=timezone.utc).timestamp() * 1000)
                 res['data'] = json.loads(data.data)
-                return JsonResponse(res)
+                return JsonResponse([res], safe=False)
             else:
                 data = []
                 return JsonResponse(data, safe=False)
@@ -275,7 +277,7 @@ def add_history(req, id, ty):
                 Interview.objects.filter(id=id, interviewee_token=token).exists()):
             interview = Interview.objects.filter(id=id).first()
             history = History(interview=interview, type=ty, time=str(
-                datetime.datetime.utcnow()), data=json.dumps(req.body.decode()))
+                datetime.datetime.utcnow()), data=req.body.decode())
             history.save()
             return HttpResponse(status=HTTPStatus.OK)
 
