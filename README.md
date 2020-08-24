@@ -12,6 +12,12 @@ user = username
 password = p@ssw0rd
 ```
 
+创建 MySQL 数据库
+
+```sql
+create database interview character set utf8
+```
+
 运行命令
 
     pipenv install
