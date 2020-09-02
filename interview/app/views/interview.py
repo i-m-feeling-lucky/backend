@@ -185,7 +185,12 @@ def add_evaluation(req, id):
         if Interview.objects.filter(interviewer_token=token, id=id).exists():
             interview = Interview.objects.get(id=id)
             data = json.loads(req.body.decode())
-            interviewer_comment = InterviewComment(interview=interview, rate=data['rate'], comment=data['comment'])
+            if InterviewComment.objects.filter(interview=interview).exists():
+                interviewer_comment = InterviewComment.objects.get(interview=interview)
+                interviewer_comment.rate = data['rate']
+                interviewer_comment.comment = data['comment']
+            else:
+                interviewer_comment = InterviewComment(interview=interview, rate=data['rate'], comment=data['comment'])
             interviewer_comment.save()
             return HttpResponse(status=HTTPStatus.OK)
         else:
