@@ -159,9 +159,15 @@ def get_free_time(req, id):
         token = req.META["HTTP_X_TOKEN"]
         userlogin = UserLogin.objects.get(token=token)
         curr_user = userlogin.user
-        if curr_user.id != id or curr_user.role != 2:
-            return JsonResponse({"message": "权限不足"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
-        return JsonResponse({"free_time": curr_user.interviewer.free_time}, status=HTTPStatus.OK)
+        if curr_user.id == id and curr_user.role == 2:
+            return JsonResponse({"free_time": curr_user.interviewer.free_time},
+                                status=HTTPStatus.OK)
+        if curr_user.role == 1:
+            assign = HRAssignInterviewer.objects.filter(hr=curr_user, interviewer=id)
+            if assign:
+                return JsonResponse({"free_time": assign[0].interviewer.free_time},
+                                    status=HTTPStatus.OK)
+        return JsonResponse({"message": "权限不足"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
     except Exception:
         return JsonResponse({"message": "查看失败"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
 
