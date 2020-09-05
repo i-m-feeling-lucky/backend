@@ -18,6 +18,18 @@ password = p@ssw0rd
 create database interview character set utf8
 ```
 
+在文件 `./interview/interview/secrets.py` 中设置用于发送邮件的用户
+
+```python
+EMAIL_SENDER = {
+    'from_addr': 'from@example.com',
+    'host': 'smtp.example.com',
+    'password': 'p@ssw0rd',
+}
+```
+
+将 `from_addr` 设置为 `__nosend` 以跳过发邮件的步骤。
+
 运行命令
 
     pipenv install

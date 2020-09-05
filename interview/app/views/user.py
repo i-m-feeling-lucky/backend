@@ -1,6 +1,7 @@
 from django.views.decorators.http import require_POST, require_GET, require_http_methods
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, JsonResponse
+from app.utils import send_email
 from app.models import *
 
 from hashlib import sha256
@@ -195,6 +196,13 @@ def put_application_result(req):
         HRAssignInterviewee.objects.get(hr=userlogin.user, interviewee=itee)
         itee.application_result = result
         itee.save()
+        if result == 0:
+            text = '面试者 {itee.name} 你好，你的面试还在等待中。'
+        elif result == 1:
+            text = '面试者 {itee.name} 你好，你的面试已通过。'
+        else:
+            text = '面试者 {itee.name} 你好，你的面试未通过。'
+        send_email(email, '面试状态通知', text)
         return JsonResponse({}, status=HTTPStatus.OK)
     except Exception:
         return JsonResponse({"message": "设置失败"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)

@@ -14,6 +14,13 @@ from corsheaders.defaults import default_headers
 
 import random
 import os
+import sys
+
+try:
+    from .secrets import EMAIL_SENDER
+except ImportError:
+    print('Error importing EMAIL_SENDER, sending email is disabled', file=sys.stderr)
+    EMAIL_SENDER = {'from_addr': '__nosend'}
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -50,6 +57,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
 ]
 
+WEB_ROOT = 'https://interview.yusanshi.com'
 CORS_ORIGIN_WHITELIST = ['https://interview.yusanshi.com']
 CORS_ORIGIN_REGEX_WHITELIST = [r'http://(localhost|127\.0\.0\.1):\d+']
 CORS_ALLOW_HEADERS = list(default_headers) + ['X-Token']

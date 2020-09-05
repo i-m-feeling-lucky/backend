@@ -1,8 +1,10 @@
 from django.views.decorators.http import require_GET, require_http_methods
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, JsonResponse
+from django.conf import settings
 from django.db.models import F
 from app.models import *
+from app.utils import send_email
 from hashlib import sha256
 from http import HTTPStatus
 import json
@@ -10,7 +12,7 @@ import uuid
 import random
 import string
 import datetime
-from datetime import timezone
+from datetime import timezone, timedelta
 
 
 @require_http_methods(['GET', 'POST'])
@@ -100,7 +102,13 @@ def add_interview(req):
                                   password=password, start_time=start_time, length=length)
             interview.save()
 
-            # TODO: Send emails
+            start = start_time.replace(tzinfo=timezone.utc) \
+                .astimezone(timezone(timedelta(hours=8)))   \
+                .replace(tzinfo=None)
+            link = f'{settings.WEB_ROOT}/interview/{interview.id}?token={interviewee_token}'
+            send_email(obj_interviewee.email, '面试时间通知',
+                       f'''面试者 {obj_interviewee.name} 你好，你的面试将于北京时间 {start} 开始，\
+持续时间 {length} 分钟，面试链接为 {link}''')
 
             return HttpResponse(status=HTTPStatus.OK)
 
