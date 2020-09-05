@@ -137,10 +137,13 @@ def put_password(req, id):
     user = User.objects.get(id=id)
     oldpassword = sha256(oldpassword.encode()).hexdigest()
     if user.pass_sha256 != oldpassword:
-        return JsonResponse({'message': '密码错误'}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
-    user.pass_sha256 = sha256(newpassword.encode()).hexdigest()
-    user.save()
-    return JsonResponse({}, status=HTTPStatus.OK)
+        return JsonResponse({'message': '旧密码输入错误'}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+    try:
+        user.pass_sha256 = sha256(newpassword.encode()).hexdigest()
+        user.save()
+        return JsonResponse({}, status=HTTPStatus.OK)
+    except Passwderror:
+        return JsonResponse({'message': '新密码不符要求'}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
 
 
 @require_http_methods(['GET', 'PUT'])
@@ -222,7 +225,7 @@ def get_assignment(req, id):
         userlogin = UserLogin.objects.get(token=token)
         curr_user = userlogin.user
 
-        if curr_user.role != 1:
+        if curr_user.role != 1 and curr_user.role != 0:
             return JsonResponse({"message": "权限不足"}, status=HTTPStatus.UNPROCESSABLE_ENTITY)
 
         intrs = [{
