@@ -79,6 +79,7 @@ class Interview(models.Model):
     password = models.CharField(max_length=32)
     start_time = models.DateTimeField()
     length = models.PositiveIntegerField(default=30)
+    actual_length = models.IntegerField(default=0)
     status = models.CharField(max_length=10, choices=STATUSES, default='upcoming')
 
     def __str__(self):

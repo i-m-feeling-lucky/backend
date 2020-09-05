@@ -33,7 +33,7 @@ def interview_infos(req):
         if UserLogin.objects.filter(token=token).exists():
             role = UserLogin.objects.get(token=token).user.role
             data = Interview.objects.values("id", "hr", "interviewer", "interviewee",
-                                            "interviewer_token", "start_time", "length", "status")
+                                            "interviewer_token", "start_time", "length", "actual_length", "status")
 
             for item in data:
                 interview = Interview.objects.get(id=item["id"])
@@ -135,7 +135,7 @@ def interview_info(req, id):
                 Interview.objects.filter(id=id, interviewee_token=token).exists()):
             data = Interview.objects.filter(id=id).values("id", "hr", "interviewer",
                                                           "interviewee", "start_time", "length",
-                                                          "status").first()
+                                                          "actual_length", "status").first()
             data['start_time'] = int(data['start_time'].replace(tzinfo=timezone.utc).timestamp())
             return JsonResponse(data)
         else:
@@ -219,6 +219,10 @@ def set_status(req, id):
             data = json.loads(req.body.decode())
             interview = Interview.objects.get(id=id)
             interview.status = data['status']
+            if data['status'] == 'ended':
+                interview.actual_length = int(
+                    datetime.datetime.utcnow().timestamp()) - int(
+                        interview.start_time.timestamp())
             interview.save()
             return HttpResponse(status=HTTPStatus.OK)
         else:
