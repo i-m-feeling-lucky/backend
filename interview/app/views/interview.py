@@ -108,7 +108,6 @@ def add_interview(req):
                 dt = datetime.datetime(int(free_time[1][0:4]), int(free_time[1][5:7]), int(free_time[1][8:10]), 
                     int(free_time[1][11:13]), int(free_time[1][14:16]))
                 free_end_time = int(dt.replace(tzinfo=timezone.utc).timestamp())
-                print(free_start_time, free_end_time)
                 if not (new_start_time >= free_start_time and new_end_time <= free_end_time):
                     res = {"message": "面试时间未完全包含在面试官空闲时间内"}
                     return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
