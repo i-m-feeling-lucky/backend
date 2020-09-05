@@ -97,6 +97,35 @@ def add_interview(req):
             else:
                 obj_interviewee = HRAssignInterviewee.objects.filter(hr=hr, interviewee=interviewee).first().interviewee
 
+            # interviewer time zone available availability check
+            new_start_time = data['start_time'] # int type
+            new_end_time = data['start_time'] + data['length'] * 60 # int type
+            free_times = json.loads(obj_interviewer.free_time)
+            for free_time in free_times:
+                dt = datetime.datetime(int(free_time[0][0:4]), int(free_time[0][5:7]), int(free_time[0][8:10]), 
+                    int(free_time[0][11:13]), int(free_time[0][14:16]))
+                free_start_time = int(dt.replace(tzinfo=timezone.utc).timestamp())
+                dt = datetime.datetime(int(free_time[1][0:4]), int(free_time[1][5:7]), int(free_time[1][8:10]), 
+                    int(free_time[1][11:13]), int(free_time[1][14:16]))
+                free_end_time = int(dt.replace(tzinfo=timezone.utc).timestamp())
+                print(free_start_time, free_end_time)
+                if not (new_start_time >= free_start_time and new_end_time <= free_end_time):
+                    res = {"message": "面试时间未完全包含在面试官空闲时间内"}
+                    return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+                existed_interviews = Interview.objects.filter(interviewer=obj_interviewer).values("start_time", "length", "status", "actual_length")
+                for existed_interview in existed_interviews:
+                    existed_start_time = int(existed_interview["start_time"].replace(tzinfo=timezone.utc).timestamp())
+                    if existed_interview["status"] == "ended":
+                        existed_end_time = existed_start_time + existed_interview["actual_length"] * 60    
+                    else:
+                        existed_end_time = existed_start_time + existed_interview["length"] * 60
+                    if not (new_end_time <= existed_start_time or new_start_time >= existed_end_time):
+                        res = {"message": "面试时间与已有面试重叠"}
+                        return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+                    elif not (new_end_time <= existed_start_time - 600 or new_start_time >= existed_end_time + 600):
+                        res = {"message": "面试时间间隔少于10分钟"}
+                        return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+
             interview = Interview(hr=current_user, interviewer=obj_interviewer, interviewee=obj_interviewee,
                                   interviewer_token=interviewer_token, interviewee_token=interviewee_token,
                                   password=password, start_time=start_time, length=length)
