@@ -2,6 +2,7 @@ from django.test import TestCase, Client
 from .models import *
 from hashlib import sha256
 import json
+import time
 
 
 class JsonClient(Client):
@@ -24,6 +25,7 @@ class SimpleTest(TestCase):
             {"email": "qqq1@qq.com", "password": "666667", "role": 1},
             {"email": "qqq2@qq.com", "password": "6666668", "role": 2},
             {"email": "qqq3@qq.com", "password": "6666669", "role": 2},
+            {"email": "qqqnew@qq.com", "name": "Sam", "role": 3},
         ]
         responseadd = self.client.post_json('/api/user', param, HTTP_X_TOKEN=self.admin_tok)
         self.assertEqual(responseadd.status_code, 200)
@@ -56,3 +58,27 @@ class SimpleTest(TestCase):
 
         responselogout = self.client.post_json('/api/logout')
         self.assertEqual(responselogout.status_code, 200)
+        
+    def test_assign(self):
+        param_HR = {"email": "qqq1@qq.com", "password": "666667", "role": 1}
+        param_interviewer = {"email": "qqq2@qq.com", "password": "6666668", "role": 2}
+        responseHR = self.client.post_json('/api/login', param_HR)
+        responseHR = responseHR.json()
+        responseinterviewer = self.client.post_json('/api/login', param_interviewer)
+        responseinterviewer = responseinterviewer.json()
+        id_interviewer = responseinterviewer['id']
+        token_interviewer = responseinterviewer['token']
+        id_HR = responseHR['id']
+        token_HR = responseHR['token']
+        param1 = {
+            "hr": id_HR,
+            "interviewer": id_interviewer
+        }
+        responseass1 = self.client.post_json('/api/user/assign/interviewer', param1, HTTP_X_TOKEN=self.admin_tok)## assign interviewer
+        self.assertEqual(responseass1.status_code, 200)
+        param2 = {
+            "hr":id_HR,
+            "interviewee": "qqqnew@qq.com"
+        }
+        responseass2 = self.client.post_json('/api/user/assign/interviewee', param2, HTTP_X_TOKEN=self.admin_tok)## assign interviewee
+        self.assertEqual(responseass2.status_code, 200)
