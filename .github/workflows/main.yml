@@ -7,9 +7,31 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+            MYSQL_ALLOW_EMPTY_PASSWORD: yes
+            MYSQL_DATABASE: interview
+        ports:
+            - '3306:3306'
 
     steps:
       - uses: actions/checkout@v2
+
+      - name: Set up Python 3.6
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.6
+
+      - name: Install pipenv
+        uses: dschep/install-pipenv-action@v1
+
+      - name: Install dependencies
+        run: pipenv install --dev
+
+      - name: Test
+        run: (cd interview && pipenv run ./manage.py test)
 
       - name: Deploy
         env:
