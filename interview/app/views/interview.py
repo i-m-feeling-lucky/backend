@@ -251,7 +251,8 @@ def set_status(req, id):
     try:
         token = req.META.get("HTTP_X_TOKEN")
 
-        if Interview.objects.filter(interviewer_token=token, id=id).exists():
+        if (Interview.objects.filter(interviewer_token=token, id=id).exists() or
+                Interview.objects.filter(interviewee_token=token, id=id).exists()):
             data = json.loads(req.body.decode())
             interview = Interview.objects.get(id=id)
             interview.status = data['status']
