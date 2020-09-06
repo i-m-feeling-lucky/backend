@@ -1,0 +1,17 @@
+name: CD
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Deploy
+        env:
+          GET_URL_PATH: ${{ secrets.GET_URL_PATH }}
+        run: curl "$GET_URL_PATH"
