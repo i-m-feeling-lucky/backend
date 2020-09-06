@@ -1,4 +1,4 @@
-name: CD
+name: CI/CD
 
 on:
   push:
@@ -7,15 +7,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-            MYSQL_ALLOW_EMPTY_PASSWORD: yes
-            MYSQL_DATABASE: interview
-        ports:
-            - '3306:3306'
-
     steps:
       - uses: actions/checkout@v2
 
