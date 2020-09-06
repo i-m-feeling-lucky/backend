@@ -74,15 +74,23 @@ WSGI_APPLICATION = 'interview.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'interview',
-        'OPTIONS': {
-            'read_default_file': 'my.cnf',
-        },
+if 'test' not in sys.argv[1]:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'interview',
+            'OPTIONS': {
+                'read_default_file': 'my.cnf',
+            },
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': 'interview',
+        }
+    }
 
 
 # Password validation
