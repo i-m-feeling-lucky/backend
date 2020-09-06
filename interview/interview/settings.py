@@ -62,6 +62,8 @@ CORS_ORIGIN_WHITELIST = ['https://interview.yusanshi.com']
 CORS_ORIGIN_REGEX_WHITELIST = [r'http://(localhost|127\.0\.0\.1):\d+']
 CORS_ALLOW_HEADERS = list(default_headers) + ['X-Token']
 
+INTERVIEW_VIDEO_ROOT = './interview-video/'
+
 ROOT_URLCONF = 'interview.urls'
 
 TEMPLATES = []

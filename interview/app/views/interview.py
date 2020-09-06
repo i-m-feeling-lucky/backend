@@ -1,11 +1,11 @@
 from django.views.decorators.http import require_GET, require_http_methods
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.files.storage import default_storage
 from django.http import HttpResponse, JsonResponse
 from django.conf import settings
 from django.db.models import F
 from app.models import *
 from app.utils import send_email
-from hashlib import sha256
 from http import HTTPStatus
 import json
 import uuid
@@ -13,6 +13,10 @@ import random
 import string
 import datetime
 from datetime import timezone, timedelta
+from pathlib import Path
+from os import path
+
+Path(settings.INTERVIEW_VIDEO_ROOT).mkdir(parents=True, exist_ok=True)
 
 
 @require_http_methods(['GET', 'POST'])
@@ -38,7 +42,8 @@ def interview_infos(req):
             for item in data:
                 interview = Interview.objects.get(id=item["id"])
 
-                item["start_time"] = int(item["start_time"].replace(tzinfo=timezone.utc).timestamp())
+                item["start_time"] = int(item["start_time"].replace(
+                    tzinfo=timezone.utc).timestamp())
                 if role != 2:
                     item["interviewer_token"] = ""
 
@@ -75,7 +80,7 @@ def add_interview(req):
             length = data['length']
             interviewer_token = str(uuid.uuid4()).replace('-', '')
             interviewee_token = str(uuid.uuid4()).replace('-', '')
-            password = ''.join(random.sample(string.ascii_letters+string.digits, 8))
+            password = ''.join(random.sample(string.ascii_letters + string.digits, 8))
 
             # current_user.id == hr
             current_user = UserLogin.objects.filter(token=token).first().user
@@ -88,14 +93,16 @@ def add_interview(req):
                 res = {"message": "Current HR does not assign the interviewer"}
                 return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
             else:
-                obj_interviewer = HRAssignInterviewer.objects.filter(hr=hr, interviewer=interviewer).first().interviewer
+                obj_interviewer = HRAssignInterviewer.objects.filter(
+                    hr=hr, interviewer=interviewer).first().interviewer
 
             # (current_user, interviewee) in HRAssignInterviewee
             if not HRAssignInterviewee.objects.filter(hr=hr, interviewee=interviewee).exists():
                 res = {"message": "Current HR does not assign the interviewee"}
                 return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
             else:
-                obj_interviewee = HRAssignInterviewee.objects.filter(hr=hr, interviewee=interviewee).first().interviewee
+                obj_interviewee = HRAssignInterviewee.objects.filter(
+                    hr=hr, interviewee=interviewee).first().interviewee
 
             # interviewer time zone available availability check
             new_start_time = data['start_time'] # int type
@@ -226,7 +233,8 @@ def add_evaluation(req, id):
                 interviewer_comment.rate = data['rate']
                 interviewer_comment.comment = data['comment']
             else:
-                interviewer_comment = InterviewComment(interview=interview, rate=data['rate'], comment=data['comment'])
+                interviewer_comment = InterviewComment(
+                    interview=interview, rate=data['rate'], comment=data['comment'])
             interviewer_comment.save()
             return HttpResponse(status=HTTPStatus.OK)
         else:
@@ -272,6 +280,16 @@ def history(req, id, ty):
         return HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED)
 
 
+@require_http_methods(['GET', 'POST'])
+def history_video(req, id, source, index):
+    if req.method == 'GET':
+        return get_history_video(req, id, source, index)
+    elif req.method == 'POST':
+        return add_history_video(req, id, source, index)
+    else:
+        return HttpResponse(status=HTTPStatus.METHOD_NOT_ALLOWED)
+
+
 def get_history(req, id, ty):
     # GET /interview/{id}/history/{ty}
     try:
@@ -313,6 +331,31 @@ def get_history(req, id, ty):
         return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
 
 
+def get_history_video(req, id, source, index):
+    # GET /interview/{id}/history/video/{source}/{index}
+    # return file blob
+    try:
+        token = req.META.get("HTTP_X_TOKEN")
+        hr = Interview.objects.get(id=id).hr
+
+        if UserLogin.objects.filter(user=hr, token=token).exists():
+            assert source in ['interviewer', 'interviewee']
+            file_path = path.join(settings.INTERVIEW_VIDEO_ROOT, str(id), source, f"{index}.webm")
+            if path.isfile(file_path):
+                f = open(file_path, "rb")
+                return HttpResponse(f, content_type='video/webm')
+            else:
+                return HttpResponse(status=HTTPStatus.NOT_FOUND)
+
+        else:
+            res = {"message": "token 信息无效"}
+            return JsonResponse(res, status=HTTPStatus.UNAUTHORIZED)
+
+    except Exception as e:
+        res = {"message": str(e)}
+        return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+
+
 def add_history(req, id, ty):
     # POST /interview/{id}/history/{ty}
     try:
@@ -324,6 +367,29 @@ def add_history(req, id, ty):
             history = History(interview=interview, type=ty, time=str(
                 datetime.datetime.utcnow()), data=req.body.decode())
             history.save()
+            return HttpResponse(status=HTTPStatus.OK)
+
+        else:
+            res = {"message": "token 信息无效"}
+            return JsonResponse(res, status=HTTPStatus.UNAUTHORIZED)
+
+    except Exception as e:
+        res = {"message": str(e)}
+        return JsonResponse(res, status=HTTPStatus.UNPROCESSABLE_ENTITY)
+
+
+def add_history_video(req, id, source, index):
+    # PUT /interview/{id}/history/video/{source}/{index}
+    try:
+        token = req.META.get("HTTP_X_TOKEN")
+
+        if (Interview.objects.filter(id=id, interviewer_token=token).exists() or
+                Interview.objects.filter(id=id, interviewee_token=token).exists()):
+            assert source in ['interviewer', 'interviewee']
+            file_dir = path.join(settings.INTERVIEW_VIDEO_ROOT, str(id), source)
+            Path(file_dir).mkdir(parents=True, exist_ok=True)
+            file_path = path.join(file_dir, f"{index}.webm")
+            default_storage.save(file_path, req.FILES['file'])
             return HttpResponse(status=HTTPStatus.OK)
 
         else:
