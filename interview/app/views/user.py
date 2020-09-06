@@ -206,11 +206,11 @@ def put_application_result(req):
         itee.application_result = result
         itee.save()
         if result == 0:
-            text = '面试者 {itee.name} 你好，你的面试还在等待中。'
+            text = f'面试者 {itee.name} 你好，你的面试还在等待中。'
         elif result == 1:
-            text = '面试者 {itee.name} 你好，你的面试已通过。'
+            text = f'面试者 {itee.name} 你好，你的面试已通过。'
         else:
-            text = '面试者 {itee.name} 你好，你的面试未通过。'
+            text = f'面试者 {itee.name} 你好，你的面试未通过。'
         send_email(email, '面试状态通知', text)
         return JsonResponse({}, status=HTTPStatus.OK)
     except Exception:
